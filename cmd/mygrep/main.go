@@ -37,6 +37,11 @@ func main() {
 	// default exit code is 0 which means success
 }
 
+const (
+	Digits            = "0123456789"
+	AlphanumericChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+)
+
 func matchLine(line []byte, pattern string) (bool, error) {
 	//if utf8.RuneCountInString(pattern) != 1 {
 	//	return false, fmt.Errorf("unsupported pattern: %q", pattern)
@@ -48,13 +53,10 @@ func matchLine(line []byte, pattern string) (bool, error) {
 	fmt.Println("Logs from your program will appear here!")
 
 	switch pattern {
+	case "\\w":
+		ok = bytes.ContainsAny(line, AlphanumericChars)
 	case "\\d":
-		for _, b := range line {
-			if b >= '0' && b <= '9' {
-				ok = true
-				break
-			}
-		}
+		ok = bytes.ContainsAny(line, Digits)
 	default:
 		ok = bytes.ContainsAny(line, pattern)
 	}
