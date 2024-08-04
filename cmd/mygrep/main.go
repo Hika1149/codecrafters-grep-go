@@ -49,13 +49,27 @@ func matchLine(line []byte, pattern string) (bool, error) {
 
 	var ok bool
 
-	// positive character groups '[abc]', [a-z], [0-9], [a-zA-Z0-9_] ...
+	// positive/negative character groups
 	if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
-		for i := 1; i < len(pattern)-1; i++ {
-			if ok, _ := matchLine(line, string(pattern[i])); ok {
-				return ok, nil
+
+		// negative character groups
+		// [^abc], [^a-z], [^0-9], [^a-zA-Z0-9_] ...
+		if pattern[1] == '^' {
+			for i := 2; i < len(pattern)-1; i++ {
+				if ok, _ := matchLine(line, string(pattern[i])); ok {
+					return false, nil
+				}
+			}
+			return true, nil
+		} else {
+			// positive character groups '[abc]', [a-z], [0-9], [a-zA-Z0-9_] ...
+			for i := 1; i < len(pattern)-1; i++ {
+				if ok, _ := matchLine(line, string(pattern[i])); ok {
+					return ok, nil
+				}
 			}
 		}
+
 	}
 
 	switch pattern {
