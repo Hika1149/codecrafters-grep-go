@@ -49,8 +49,14 @@ func matchLine(line []byte, pattern string) (bool, error) {
 
 	var ok bool
 
-	// You can use print statements as follows for debugging, they'll be visible when running tests.
-	fmt.Println("Logs from your program will appear here!")
+	// positive character groups '[abc]', [a-z], [0-9], [a-zA-Z0-9_] ...
+	if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
+		for i := 1; i < len(pattern)-1; i++ {
+			if ok, _ := matchLine(line, string(pattern[i])); ok {
+				return ok, nil
+			}
+		}
+	}
 
 	switch pattern {
 	case "\\w":
