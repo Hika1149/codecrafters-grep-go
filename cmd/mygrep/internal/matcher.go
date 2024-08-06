@@ -30,6 +30,7 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 		if i+1 < len(pattern) {
 			nc = pattern[i+1]
 		}
+		// handle char class escape
 		if c == '\\' && nc != '\\' {
 			chs = append(chs, &Ch{
 				CharType: CharClassEscape,
@@ -37,6 +38,31 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			})
 			i += 2
 			continue
+		}
+		// handle char positive/negative group
+		if c == '[' {
+			var (
+				foundGroup = false
+				j          = i + 1
+			)
+			for ; j < len(pattern); j++ {
+				if pattern[j] == ']' {
+					foundGroup = true
+					break
+				}
+			}
+			if foundGroup {
+				charGroup := pattern[i+1 : j]
+				charType := CharPositiveGroup
+				if charGroup[1] == '^' {
+					charType = CharNegativeGroup
+				}
+				chs = append(chs, &Ch{
+					CharType: charType,
+					Value:    charGroup,
+				})
+				continue
+			}
 		}
 
 		chs = append(chs, &Ch{
@@ -91,7 +117,11 @@ func (m *Matcher) MatchHere(text []byte) bool {
 					return false
 				}
 			}
+		case CharPositiveGroup:
+			// simple no range separator
+
 		}
+
 		// advance i
 		i++
 
