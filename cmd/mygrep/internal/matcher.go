@@ -17,6 +17,14 @@ type Matcher struct {
 func NewMatcher() *Matcher {
 	return &Matcher{}
 }
+func (m *Matcher) String() string {
+	str := ""
+	for _, ch := range m.Chs {
+		str += fmt.Sprintf("charType: %s value: %s\n", ch.CharType, ch.Value)
+	}
+	return str
+
+}
 
 // ScanPattern scans the reg pattern string and convert it to a slice of Ch
 func (m *Matcher) ScanPattern(pattern string) *Matcher {
@@ -54,13 +62,15 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			if foundGroup {
 				charGroup := pattern[i+1 : j]
 				charType := CharPositiveGroup
-				if charGroup[1] == '^' {
+				if charGroup[0] == '^' {
 					charType = CharNegativeGroup
 				}
 				chs = append(chs, &Ch{
 					CharType: charType,
 					Value:    charGroup,
 				})
+				//advanced
+				i = j + 1
 				continue
 			}
 		}
@@ -118,8 +128,17 @@ func (m *Matcher) MatchHere(text []byte) bool {
 				}
 			}
 		case CharPositiveGroup:
-			// simple no range separator
+			// simple
+			// - no range separator
+			// - no class escape
+			if !bytes.ContainsAny([]byte{tc}, ch.Value) {
+				return false
+			}
 
+		case CharNegativeGroup:
+			if bytes.ContainsAny([]byte{tc}, ch.Value) {
+				return false
+			}
 		}
 
 		// advance i

@@ -29,7 +29,9 @@ func main() {
 	// First turn pattern into a slice of structs
 	//
 
-	ok := internal.NewMatcher().ScanPattern(pattern).Match(line)
+	matcher := internal.NewMatcher().ScanPattern(pattern)
+	fmt.Println(matcher.String())
+	ok := matcher.Match(line)
 
 	//ok, err := matchLine(line, pattern)
 	//if err != nil {
