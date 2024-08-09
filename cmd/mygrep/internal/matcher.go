@@ -72,6 +72,16 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			i += 2
 			continue
 		}
+		// handle quantifier one or more
+		if nc == '+' {
+			chs = append(chs, &Ch{
+				CharType: CharQuantifierOneOrMore,
+				Value:    string(c),
+			})
+			i += 2
+			continue
+		}
+
 		// handle char positive/negative group
 		if c == '[' {
 			endPos := strings.Index(pattern[i:], "]")
@@ -125,7 +135,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 
 	i := 0
 
-	for _, ch := range Chs {
+	for pi, ch := range Chs {
 
 		// handle input text reaches end
 		if i >= len(text) {
@@ -137,7 +147,14 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 			return false
 		}
 
-		tc := text[i]
+		var (
+			// previous char
+			//pc byte
+			tc = text[i]
+		)
+		//if i > 0 {
+		//	pc = text[i-1]
+		//}
 
 		switch ch.CharType {
 
@@ -176,6 +193,20 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 
 			// previous matched xxx is not at the end of text
 
+			return false
+
+		case CharQuantifierOneOrMore:
+			// should match ch.Value one or more times
+			if tc != ch.Value[0] {
+				return false
+			}
+
+			// recursive try one or more times
+			for j := i; j < len(text) && string(tc) == ch.Value; j++ {
+				if m.MatchHere(text[j+1:], m.Chs[pi+1:]) {
+					return true
+				}
+			}
 			return false
 
 		}
