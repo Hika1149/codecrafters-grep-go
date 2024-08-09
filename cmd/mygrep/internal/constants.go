@@ -11,6 +11,9 @@ const (
 	CharPositiveGroup CharType = "charPositiveGroup"
 	// CharNegativeGroup eg: [^a-z]
 	CharNegativeGroup CharType = "charNegativeGroup"
+
+	// CharStartAnchor should begin the match at the beginning of the input string
+	CharStartAnchor CharType = "^"
 )
 
 const (

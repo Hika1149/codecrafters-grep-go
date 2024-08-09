@@ -3,6 +3,7 @@ package internal
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 type Ch struct {
@@ -30,7 +31,21 @@ func (m *Matcher) String() string {
 func (m *Matcher) ScanPattern(pattern string) *Matcher {
 
 	chs := make([]*Ch, 0)
-	for i := 0; i < len(pattern); {
+
+	var (
+		i = 0
+	)
+
+	// detect start of string line anchor
+	if strings.HasPrefix(pattern, "^") {
+		chs = append(chs, &Ch{
+			CharType: CharStartAnchor,
+			Value:    "",
+		})
+		i++
+	}
+
+	for i < len(pattern) {
 		var (
 			c  = pattern[i]
 			nc byte
@@ -49,28 +64,21 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 		}
 		// handle char positive/negative group
 		if c == '[' {
-			var (
-				foundGroup = false
-				j          = i + 1
-			)
-			for ; j < len(pattern); j++ {
-				if pattern[j] == ']' {
-					foundGroup = true
-					break
-				}
-			}
-			if foundGroup {
-				charGroup := pattern[i+1 : j]
+			endPos := strings.Index(pattern[i:], "]")
+			// found group
+			if endPos != -1 {
+				charGroup := pattern[i+1 : i+endPos]
 				charType := CharPositiveGroup
 				if charGroup[0] == '^' {
 					charType = CharNegativeGroup
+					charGroup = charGroup[1:]
 				}
 				chs = append(chs, &Ch{
 					CharType: charType,
 					Value:    charGroup,
 				})
 				//advanced
-				i = j + 1
+				i = i + endPos + 1
 				continue
 			}
 		}
@@ -88,20 +96,26 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 }
 
 func (m *Matcher) Match(text []byte) bool {
+
+	// should match from beginning of text
+	if m.Chs[0].CharType == CharStartAnchor {
+		return m.MatchHere(text, m.Chs[1:])
+	}
+
 	// try match at each position text[i:] with pattern []chs
 	for i := 0; i < len(text); i++ {
-		if m.MatchHere(text[i:]) {
+		if m.MatchHere(text[i:], m.Chs) {
 			return true
 		}
 	}
 	return false
 }
 
-func (m *Matcher) MatchHere(text []byte) bool {
+func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 
 	i := 0
 
-	for _, ch := range m.Chs {
+	for _, ch := range Chs {
 		//
 		if i >= len(text) {
 			return false
