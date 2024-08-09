@@ -53,6 +53,16 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 		if i+1 < len(pattern) {
 			nc = pattern[i+1]
 		}
+
+		// handle end of string line anchor
+		if c == '$' && i == len(pattern)-1 {
+			chs = append(chs, &Ch{
+				CharType: CharEndAnchor,
+				Value:    "",
+			})
+			break
+		}
+
 		// handle char class escape
 		if c == '\\' && nc != '\\' {
 			chs = append(chs, &Ch{
@@ -116,8 +126,14 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 	i := 0
 
 	for _, ch := range Chs {
-		//
+
+		// handle input text reaches end
 		if i >= len(text) {
+
+			// -> pattern also reaches end
+			if ch.CharType == CharEndAnchor {
+				return true
+			}
 			return false
 		}
 
@@ -153,6 +169,15 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 			if bytes.ContainsAny([]byte{tc}, ch.Value) {
 				return false
 			}
+
+		case CharEndAnchor:
+			// If the regular expression is a $ at the end of the expression,
+			// then the text matches only if it too is at its end.
+
+			// previous matched xxx is not at the end of text
+
+			return false
+
 		}
 
 		// advance i

@@ -14,6 +14,9 @@ const (
 
 	// CharStartAnchor should begin the match at the beginning of the input string
 	CharStartAnchor CharType = "^"
+
+	// CharEndAnchor preceding pattern must occur at the end of the input string
+	CharEndAnchor CharType = "$"
 )
 
 const (

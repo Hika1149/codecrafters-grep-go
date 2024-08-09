@@ -33,57 +33,9 @@ func main() {
 	fmt.Println(matcher.String())
 	ok := matcher.Match(line)
 
-	//ok, err := matchLine(line, pattern)
-	//if err != nil {
-	//	fmt.Fprintf(os.Stderr, "error: %v\n", err)
-	//	os.Exit(2)
-	//}
-
 	if !ok {
 		os.Exit(1)
 	}
 
 	// default exit code is 0 which means success
 }
-
-//func matchLine(line []byte, pattern string) (bool, error) {
-//	//if utf8.RuneCountInString(pattern) != 1 {
-//	//	return false, fmt.Errorf("unsupported pattern: %q", pattern)
-//	//}
-//
-//	var ok bool
-//
-//	// positive/negative character groups
-//	if len(pattern) > 2 && pattern[0] == '[' && pattern[len(pattern)-1] == ']' {
-//
-//		// negative character groups
-//		// [^abc], [^a-z], [^0-9], [^a-zA-Z0-9_] ...
-//		if pattern[1] == '^' {
-//			for i := 2; i < len(pattern)-1; i++ {
-//				if ok, _ := matchLine(line, string(pattern[i])); ok {
-//					return false, nil
-//				}
-//			}
-//			return true, nil
-//		} else {
-//			// positive character groups '[abc]', [a-z], [0-9], [a-zA-Z0-9_] ...
-//			for i := 1; i < len(pattern)-1; i++ {
-//				if ok, _ := matchLine(line, string(pattern[i])); ok {
-//					return ok, nil
-//				}
-//			}
-//		}
-//
-//	}
-//
-//	switch pattern {
-//	case "\\w":
-//		ok = bytes.ContainsAny(line, AlphanumericChars)
-//	case "\\d":
-//		ok = bytes.ContainsAny(line, Digits)
-//	default:
-//		ok = bytes.ContainsAny(line, pattern)
-//	}
-//
-//	return ok, nil
-//}
