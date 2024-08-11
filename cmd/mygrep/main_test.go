@@ -15,6 +15,7 @@ func TestMatcher(t *testing.T) {
 	var matchLineTests = []MatchTest{
 
 		{[]byte("dog"), "d", true},
+		{[]byte("dog"), "d.g", true},
 	}
 
 	for _, tt := range matchLineTests {

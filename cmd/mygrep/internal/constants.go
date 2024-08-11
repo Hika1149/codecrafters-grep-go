@@ -23,6 +23,9 @@ const (
 
 	// CharQuantifierZeroOrOne ?, eg: a?
 	CharQuantifierZeroOrOne CharType = "char.quantifier.zeroOrOne"
+
+	// CharWildcard ., eg: a.
+	CharWildcard CharType = "char.wildcard"
 )
 
 const (

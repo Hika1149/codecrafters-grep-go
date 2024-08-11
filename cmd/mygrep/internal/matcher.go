@@ -90,6 +90,14 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			i += 2
 			continue
 		}
+		if c == '.' {
+			chs = append(chs, &Ch{
+				CharType: CharWildcard,
+				Value:    "",
+			})
+			i++
+			continue
+		}
 
 		// handle char positive/negative group
 		if c == '[' {
@@ -205,6 +213,9 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 			return false
 
 		case CharQuantifierOneOrMore:
+
+			// todo support wildcard with quantifier
+
 			// should match ch.Value one or more times
 			if tc != ch.Value[0] {
 				return false
@@ -221,6 +232,8 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 		case CharQuantifierZeroOrOne:
 			// should match ch.Value zero or one times
 
+			// todo support wildcard with quantifier
+
 			// zero times
 			if m.MatchHere(text[i:], m.Chs[pi+1:]) {
 				return true
@@ -230,6 +243,10 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 				return true
 			}
 			return false
+
+		case CharWildcard:
+			i++
+			continue
 
 		}
 
