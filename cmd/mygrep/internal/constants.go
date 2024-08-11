@@ -18,7 +18,11 @@ const (
 	// CharEndAnchor preceding pattern must occur at the end of the input string
 	CharEndAnchor CharType = "$"
 
+	// CharQuantifierOneOrMore +, eg: a+
 	CharQuantifierOneOrMore CharType = "char.quantifier.oneOrMore"
+
+	// CharQuantifierZeroOrOne ?, eg: a?
+	CharQuantifierZeroOrOne CharType = "char.quantifier.zeroOrOne"
 )
 
 const (

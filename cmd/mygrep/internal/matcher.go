@@ -81,6 +81,15 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			i += 2
 			continue
 		}
+		// handle quantifier zero or one
+		if nc == '?' {
+			chs = append(chs, &Ch{
+				CharType: CharQuantifierZeroOrOne,
+				Value:    string(c),
+			})
+			i += 2
+			continue
+		}
 
 		// handle char positive/negative group
 		if c == '[' {
@@ -206,6 +215,19 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 				if m.MatchHere(text[j+1:], m.Chs[pi+1:]) {
 					return true
 				}
+			}
+			return false
+
+		case CharQuantifierZeroOrOne:
+			// should match ch.Value zero or one times
+
+			// zero times
+			if m.MatchHere(text[i:], m.Chs[pi+1:]) {
+				return true
+			}
+			// one times
+			if string(tc) == ch.Value && m.MatchHere(text[i+1:], m.Chs[pi+1:]) {
+				return true
 			}
 			return false
 
