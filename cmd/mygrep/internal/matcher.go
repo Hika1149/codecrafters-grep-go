@@ -15,7 +15,11 @@ type Ch struct {
 }
 
 type Matcher struct {
+	// Chs: split pattern string to slice of Ch
 	Chs []*Ch
+
+	// CaptureGroups storing capturing groups and will be used by backReferences
+	CaptureGroups []*Ch
 }
 
 func NewMatcher() *Matcher {

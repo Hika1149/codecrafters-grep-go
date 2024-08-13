@@ -30,6 +30,12 @@ const (
 	// CharAlternation |, eg: a|b
 
 	CharAlternation CharType = "char.alternation"
+
+	// CharCaptureGroup eg: (a) can be used by backreference
+	CharCaptureGroup CharType = "char.captureGroup"
+
+	// CharBackReference eg: \1, \2, \3
+	CharBackReference CharType = "char.backReference"
 )
 
 const (
