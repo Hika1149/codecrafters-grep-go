@@ -12,6 +12,9 @@ type Ch struct {
 
 	// AlterValues is used for alternation
 	AlterValues []string
+
+	// PrecedingElement is used by quantifier
+	PrecedingElement *Ch
 }
 
 type Matcher struct {
@@ -35,7 +38,7 @@ func (m *Matcher) String() string {
 }
 
 // ScanPattern scans the reg pattern string and convert it to a slice of Ch
-func (m *Matcher) ScanPattern(pattern string) *Matcher {
+func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 
 	chs := make([]*Ch, 0)
 
@@ -88,6 +91,8 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			i += 2
 			continue
 		}
+		// todo handle class escape with quantifier
+
 		// handle quantifier zero or one
 		if nc == '?' {
 			chs = append(chs, &Ch{
@@ -107,7 +112,9 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			continue
 		}
 
-		// try to found  alternation
+		// try to found
+		// - alternation
+		// - capture group
 		if c == '(' {
 			endPos := strings.Index(pattern[i:], ")")
 			if endPos != -1 {
@@ -129,6 +136,20 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 					i = i + endPos + 1
 					continue
 				}
+
+				// found capture groups
+				// 1. append to pattern
+				// 2. store in CaptureGroups field for backreference
+				chs = append(chs, &Ch{
+					CharType:    CharCaptureGroup,
+					Value:       pattern[i+1 : i+endPos],
+					AlterValues: nil,
+				})
+				//captureGroups = append(captureGroups, pattern[i+1:i+endPos])
+				i = i + endPos + 1
+
+				continue
+
 			}
 
 		}
@@ -161,7 +182,13 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 		i++
 
 	}
-	m.Chs = chs
+	return chs
+
+}
+
+// ScanPattern scans the reg pattern string and convert it to a slice of Ch
+func (m *Matcher) ScanPattern(pattern string) *Matcher {
+	m.Chs = m.scanRawPattern(pattern)
 	return m
 
 }
