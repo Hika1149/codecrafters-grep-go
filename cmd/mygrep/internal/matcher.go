@@ -9,6 +9,9 @@ import (
 type Ch struct {
 	CharType CharType
 	Value    string
+
+	// AlterValues is used for alternation
+	AlterValues []string
 }
 
 type Matcher struct {
@@ -21,7 +24,7 @@ func NewMatcher() *Matcher {
 func (m *Matcher) String() string {
 	str := ""
 	for _, ch := range m.Chs {
-		str += fmt.Sprintf("charType: %s value: %s\n", ch.CharType, ch.Value)
+		str += fmt.Sprintf("charType: %s value: %s alterValues=%v\n", ch.CharType, ch.Value, ch.AlterValues)
 	}
 	return str
 
@@ -90,6 +93,7 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			i += 2
 			continue
 		}
+		// handle wildcard
 		if c == '.' {
 			chs = append(chs, &Ch{
 				CharType: CharWildcard,
@@ -97,6 +101,32 @@ func (m *Matcher) ScanPattern(pattern string) *Matcher {
 			})
 			i++
 			continue
+		}
+
+		// try to found  alternation
+		if c == '(' {
+			endPos := strings.Index(pattern[i:], ")")
+			if endPos != -1 {
+				// (a|b|c|d)
+				alterStrList := strings.Split(pattern[i+1:i+endPos], "|")
+				// found alternation
+				if len(alterStrList) > 1 {
+					ch := &Ch{
+						CharType:    CharAlternation,
+						Value:       "",
+						AlterValues: make([]string, 0),
+					}
+					for _, alterStr := range alterStrList {
+						ch.AlterValues = append(ch.AlterValues, alterStr)
+					}
+
+					chs = append(chs, ch)
+
+					i = i + endPos + 1
+					continue
+				}
+			}
+
 		}
 
 		// handle char positive/negative group
@@ -247,6 +277,22 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 		case CharWildcard:
 			i++
 			continue
+		case CharAlternation:
+			// try each alternation
+			// is simple no class escape, no quantifier ....
+			for _, alterStr := range ch.AlterValues {
+
+				if i+len(alterStr) > len(text) {
+					continue
+				}
+
+				if string(text[i:i+len(alterStr)]) == alterStr {
+					if m.MatchHere(text[i+len(alterStr):], Chs[pi+1:]) {
+						return true
+					}
+				}
+			}
+			return false
 
 		}
 

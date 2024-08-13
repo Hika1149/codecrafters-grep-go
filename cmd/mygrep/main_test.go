@@ -16,13 +16,18 @@ func TestMatcher(t *testing.T) {
 
 		{[]byte("dog"), "d", true},
 		{[]byte("dog"), "d.g", true},
+		{[]byte("dog"), "(cat|dog)", true},
+		{[]byte("a cat"), "a (cat|dog)", true},
 	}
 
 	for _, tt := range matchLineTests {
-		m := internal.NewMatcher().ScanPattern(tt.pattern).Match(tt.line)
+		matcher := internal.NewMatcher().ScanPattern(tt.pattern)
 
+		m := matcher.Match(tt.line)
 		if m != tt.expected {
-			t.Errorf("line=%v pattern=%v Expected %v, but got %v\n", string(tt.line), tt.pattern, tt.expected, m)
+
+			t.Errorf("line=%v pattern=%v Expected %v, but got %v\nmatcher=%v\n", string(tt.line), tt.pattern, tt.expected, m, matcher.String())
+
 		}
 	}
 

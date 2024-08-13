@@ -26,6 +26,10 @@ const (
 
 	// CharWildcard ., eg: a.
 	CharWildcard CharType = "char.wildcard"
+
+	// CharAlternation |, eg: a|b
+
+	CharAlternation CharType = "char.alternation"
 )
 
 const (
