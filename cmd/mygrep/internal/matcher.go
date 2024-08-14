@@ -17,6 +17,27 @@ type Ch struct {
 	PrecedingElement *Ch
 }
 
+func (ch *Ch) String() string {
+
+	var precedingStr string
+	if ch.PrecedingElement != nil {
+		precedingStr = ch.PrecedingElement.String()
+	}
+
+	return fmt.Sprintf("charType: %s value: %s alterValues=%v precedingStr=%v\n", ch.CharType, ch.Value, ch.AlterValues, precedingStr)
+
+}
+
+func popCh(chs []*Ch) ([]*Ch, *Ch) {
+	length := len(chs)
+	if length == 0 {
+		return chs, nil
+	}
+
+	return chs[:length-1], chs[length-1]
+
+}
+
 type Matcher struct {
 	// Chs: split pattern string to slice of Ch
 	Chs []*Ch
@@ -31,7 +52,7 @@ func NewMatcher() *Matcher {
 func (m *Matcher) String() string {
 	str := ""
 	for _, ch := range m.Chs {
-		str += fmt.Sprintf("charType: %s value: %s alterValues=%v\n", ch.CharType, ch.Value, ch.AlterValues)
+		str += fmt.Sprintf("%v", ch.String())
 	}
 	return str
 
@@ -73,6 +94,18 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 			break
 		}
 
+		// handle quantifier one or more
+		if c == '+' {
+			poppedChs, lastElement := popCh(chs)
+			chs = append(poppedChs, &Ch{
+				CharType:         CharQuantifierOneOrMore,
+				Value:            string(c),
+				PrecedingElement: lastElement,
+			})
+			i++
+			continue
+		}
+
 		// handle char class escape
 		if c == '\\' && nc != '\\' {
 			chs = append(chs, &Ch{
@@ -82,16 +115,6 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 			i += 2
 			continue
 		}
-		// handle quantifier one or more
-		if nc == '+' {
-			chs = append(chs, &Ch{
-				CharType: CharQuantifierOneOrMore,
-				Value:    string(c),
-			})
-			i += 2
-			continue
-		}
-		// todo handle class escape with quantifier
 
 		// handle quantifier zero or one
 		if nc == '?' {
@@ -208,6 +231,28 @@ func (m *Matcher) Match(text []byte) bool {
 	}
 	return false
 }
+func (m *Matcher) MatchBasePattern(tc byte, ch *Ch) bool {
+	switch ch.CharType {
+	case CharLiteral:
+		if string(tc) == ch.Value {
+			return true
+		}
+	case CharClassEscape:
+		switch ch.Value {
+		case "\\w":
+			if bytes.ContainsAny([]byte{tc}, AlphanumericChars) {
+				return true
+			}
+		case "\\d":
+			if bytes.ContainsAny([]byte{tc}, Digits) {
+				return true
+			}
+		}
+
+	}
+	return false
+
+}
 
 func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 
@@ -236,21 +281,9 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 
 		switch ch.CharType {
 
-		case CharLiteral:
-			if string(tc) != ch.Value {
+		case CharLiteral, CharClassEscape:
+			if !m.MatchBasePattern(tc, ch) {
 				return false
-			}
-
-		case CharClassEscape:
-			switch ch.Value {
-			case "\\w":
-				if !bytes.ContainsAny([]byte{tc}, AlphanumericChars) {
-					return false
-				}
-			case "\\d":
-				if !bytes.ContainsAny([]byte{tc}, Digits) {
-					return false
-				}
 			}
 		case CharPositiveGroup:
 			// simple
@@ -274,16 +307,12 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) bool {
 			return false
 
 		case CharQuantifierOneOrMore:
-
-			// todo support wildcard with quantifier
-
-			// should match ch.Value one or more times
-			if tc != ch.Value[0] {
+			// should match precedingElement one or more times
+			if !m.MatchBasePattern(tc, ch.PrecedingElement) {
 				return false
 			}
-
 			// recursive try one or more times
-			for j := i; j < len(text) && string(tc) == ch.Value; j++ {
+			for j := i; j < len(text) && m.MatchBasePattern(text[j], ch.PrecedingElement); j++ {
 				if m.MatchHere(text[j+1:], m.Chs[pi+1:]) {
 					return true
 				}
