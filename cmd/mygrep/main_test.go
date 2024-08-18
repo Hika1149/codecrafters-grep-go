@@ -20,9 +20,10 @@ func TestMatcher(t *testing.T) {
 		{[]byte("a cat"), "a (cat|dog)", true},
 		{[]byte("caats"), `ca+ts`, true},
 		{[]byte("cat"), `\w+`, true},
-		//{[]byte("cat and cat"), `(cat) and \1`, true},
+		{[]byte("cat and cat"), `(cat) and \1`, true},
 		{[]byte("cat and cat"), `(\w+) and \1`, true},
 		{[]byte("cat and dog"), `(\w+) and \1`, false},
+		{[]byte("abcd is abcd, not efg"), `"([abcd]+) is \1, not [^xyz]+`, false},
 	}
 
 	for _, tt := range matchLineTests {
