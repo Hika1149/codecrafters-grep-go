@@ -276,6 +276,18 @@ func (m *Matcher) MatchBasePattern(tc byte, ch *Ch) bool {
 				return true
 			}
 		}
+	case CharPositiveGroup:
+		// simple
+		// - no range separator
+		// - no class escape
+		if bytes.ContainsAny([]byte{tc}, ch.Value) {
+			return true
+		}
+
+	case CharNegativeGroup:
+		if !bytes.ContainsAny([]byte{tc}, ch.Value) {
+			return true
+		}
 
 	}
 	return false
@@ -314,22 +326,10 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 
 		switch ch.CharType {
 
-		case CharLiteral, CharClassEscape:
+		case CharLiteral, CharClassEscape,
+			CharPositiveGroup,
+			CharNegativeGroup:
 			if !m.MatchBasePattern(tc, ch) {
-				res.Matched = false
-				break
-			}
-		case CharPositiveGroup:
-			// simple
-			// - no range separator
-			// - no class escape
-			if !bytes.ContainsAny([]byte{tc}, ch.Value) {
-				res.Matched = false
-				break
-			}
-
-		case CharNegativeGroup:
-			if bytes.ContainsAny([]byte{tc}, ch.Value) {
 				res.Matched = false
 				break
 			}

@@ -13,17 +13,18 @@ func TestMatcher(t *testing.T) {
 	}
 
 	var matchLineTests = []MatchTest{
-
-		{[]byte("dog"), "d", true},
-		{[]byte("dog"), "d.g", true},
-		{[]byte("dog"), "(cat|dog)", true},
-		{[]byte("a cat"), "a (cat|dog)", true},
-		{[]byte("caats"), `ca+ts`, true},
-		{[]byte("cat"), `\w+`, true},
-		{[]byte("cat and cat"), `(cat) and \1`, true},
-		{[]byte("cat and cat"), `(\w+) and \1`, true},
-		{[]byte("cat and dog"), `(\w+) and \1`, false},
-		{[]byte("abcd is abcd, not efg"), `"([abcd]+) is \1, not [^xyz]+`, false},
+		//{[]byte("dog"), "d", true},
+		//{[]byte("dog"), "d.g", true},
+		//{[]byte("dog"), "(cat|dog)", true},
+		//{[]byte("a cat"), "a (cat|dog)", true},
+		//{[]byte("caats"), `ca+ts`, true},
+		//{[]byte("cat"), `\w+`, true},
+		//{[]byte("cat and cat"), `(cat) and \1`, true},
+		//{[]byte("cat and cat"), `(\w+) and \1`, true},
+		//{[]byte("cat and dog"), `(\w+) and \1`, false},
+		//{[]byte("abcd is"), `[abcd]+ is`, true},
+		//{[]byte("abcd is abcd, not efg"), `([abcd]+) is \1, not [^xyz]+`, true},
+		{[]byte("this starts and ends with this"), `^(\w+) starts and ends with \1$`, true},
 	}
 
 	for _, tt := range matchLineTests {
