@@ -30,7 +30,9 @@ func TestMatcher(t *testing.T) {
 		//{[]byte("bugs here and bugs there"), `(b..s|c..e) here and \1 there`, true},
 		//{[]byte("3 red squares and 3 red circles"), `(\d+) (\w+) squares and \1 \2 circles`, true},
 		//{[]byte("3 red squares and 4 red circles"), `(\d+) (\w+) squares and \1 \2 circles`, false},
-		{[]byte("cat and fish, cat with fish"), `(c.t|d.g) and (f..h|b..d), \1 with \2`, true},
+		//{[]byte("cat and fish, cat with fish"), `(c.t|d.g) and (f..h|b..d), \1 with \2`, true},
+		// // nested backreference
+		{[]byte("'cat and cat' is the same as 'cat and cat'"), `('(cat) and \2') is the same as \1`, true},
 	}
 
 	for _, tt := range matchLineTests {
