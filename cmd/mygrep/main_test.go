@@ -24,7 +24,10 @@ func TestMatcher(t *testing.T) {
 		//{[]byte("cat and dog"), `(\w+) and \1`, false},
 		//{[]byte("abcd is"), `[abcd]+ is`, true},
 		//{[]byte("abcd is abcd, not efg"), `([abcd]+) is \1, not [^xyz]+`, true},
-		{[]byte("this starts and ends with this"), `^(\w+) starts and ends with \1$`, true},
+		//{[]byte("this starts and ends with this"), `^(\w+) starts and ends with \1$`, true},
+		// //alternation with wildcard
+		//{[]byte("bugs here"), `(b..s|c..e) here`, true},
+		{[]byte("bugs here and bugs there"), `(b..s|c..e) here and \1 there`, true},
 	}
 
 	for _, tt := range matchLineTests {

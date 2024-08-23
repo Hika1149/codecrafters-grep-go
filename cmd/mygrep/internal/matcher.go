@@ -7,43 +7,6 @@ import (
 	"strings"
 )
 
-type Ch struct {
-	CharType CharType
-	Value    string
-
-	// AlterValues is used for alternation
-	AlterValues []string
-
-	// PrecedingElement is used by quantifier
-	PrecedingElement *Ch
-
-	// GroupElements elements of capture group
-	GroupElements []*Ch
-	// GroupIndex index of capture group in mather pattern
-	GroupIndex int
-}
-
-func (ch *Ch) String() string {
-
-	var precedingStr string
-	if ch.PrecedingElement != nil {
-		precedingStr = ch.PrecedingElement.String()
-	}
-
-	return fmt.Sprintf("charType: %s value: %s alterValues=%v precedingStr=%v\n", ch.CharType, ch.Value, ch.AlterValues, precedingStr)
-
-}
-
-func popCh(chs []*Ch) ([]*Ch, *Ch) {
-	length := len(chs)
-	if length == 0 {
-		return chs, nil
-	}
-
-	return chs[:length-1], chs[length-1]
-
-}
-
 type MatchedResult struct {
 	Matched bool
 	// all possible matched endPos
@@ -162,35 +125,38 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 		if c == '(' {
 			endPos := strings.Index(pattern[i:], ")")
 			if endPos != -1 {
+
+				// each matched alter value can be capture group
+				groupIndex = groupIndex + 1
 				// (a|b|c|d)
 				alterStrList := strings.Split(pattern[i+1:i+endPos], "|")
 				// found alternation
+
 				if len(alterStrList) > 1 {
 					ch := &Ch{
 						CharType:    CharAlternation,
 						Value:       "",
-						AlterValues: make([]string, 0),
+						AlterValues: make([][]*Ch, 0),
+						GroupIndex:  groupIndex,
 					}
 					for _, alterStr := range alterStrList {
-						ch.AlterValues = append(ch.AlterValues, alterStr)
+						ch.AlterValues = append(ch.AlterValues, m.scanRawPattern(alterStr))
 					}
 
 					chs = append(chs, ch)
 
-					i = i + endPos + 1
-					continue
-				}
+				} else {
+					// found single capture groups
+					// 1. append to pattern
 
-				// found capture groups
-				// 1. append to pattern
-				groupIndex = groupIndex + 1
-				chs = append(chs, &Ch{
-					CharType:      CharCaptureGroup,
-					Value:         pattern[i+1 : i+endPos],
-					AlterValues:   nil,
-					GroupElements: m.scanRawPattern(pattern[i+1 : i+endPos]),
-					GroupIndex:    groupIndex,
-				})
+					chs = append(chs, &Ch{
+						CharType:      CharCaptureGroup,
+						Value:         pattern[i+1 : i+endPos],
+						AlterValues:   nil,
+						GroupElements: m.scanRawPattern(pattern[i+1 : i+endPos]),
+						GroupIndex:    groupIndex,
+					})
+				}
 
 				// 2. store in CaptureGroups field for backreference
 				m.CaptureGroups = append(m.CaptureGroups, "")
@@ -310,6 +276,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 			// -> pattern also reaches end
 			if ch.CharType == CharEndAnchor {
 				res.EndPosList = append(res.EndPosList, i)
+				break
 			}
 			res.Matched = false
 			break
@@ -388,25 +355,33 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 			continue
 		case CharAlternation:
 			// try each alternation
-			// is simple no class escape, no quantifier ....
 			mq := false
-			for _, alterStr := range ch.AlterValues {
+			for _, alterValue := range ch.AlterValues {
 
-				if i+len(alterStr) > len(text) {
-					continue
-				}
+				//  try match current alterValue
+				if ma := m.MatchHere(text[i:], alterValue); ma.Matched {
+					// matched current alterValue
 
-				if string(text[i:i+len(alterStr)]) == alterStr {
-					if mr := m.MatchHere(text[i+len(alterStr):], Chs[pi+1:]); mr.Matched {
-						mq = true
-						res = mr
-						break
+					for _, endPosAlter := range ma.EndPosList {
+						nextI := i + endPosAlter
+						// each matched alter value can be capture group
+						m.CaptureGroups[ch.GroupIndex] = string(text[i : i+nextI])
+						//fmt.Printf("matched alterValue len=%v nextI=%v\n", len(alterValue), nextI)
+						if mr := m.MatchHere(text[nextI:], Chs[pi+1:]); mr.Matched {
+							// store all possible matched endPos
+							for _, endPos := range mr.EndPosList {
+								res.EndPosList = append(res.EndPosList, nextI+endPos)
+							}
+							mq = true
+						}
 					}
+
 				}
 			}
 			if !mq {
 				res.Matched = false
 			}
+			//fmt.Println("alteration end mq=", mq)
 			return res
 
 		case CharCaptureGroup:
@@ -419,7 +394,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 				for _, mgEnd := range mg.EndPosList {
 					// store matched group value
 					m.CaptureGroups[ch.GroupIndex] = string(text[i : i+mgEnd])
-					//fmt.Println("matched group value", ch.GroupIndex, m.CaptureGroups[ch.GroupIndex])
+					fmt.Println("matched group value", ch.GroupIndex, m.CaptureGroups[ch.GroupIndex])
 
 					nextI := i + mgEnd
 					// advanced to i+mgEnd
@@ -438,9 +413,10 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 		case CharBackReference:
 			groupIndex, _ := strconv.Atoi(ch.Value)
 			groupValue := m.CaptureGroups[groupIndex]
-			//fmt.Printf("groupIndex=%v groupValue=%v ch=%v\n", groupIndex, groupValue, ch.String())
-			if string(text[i:i+len(groupValue)]) == groupValue {
-				i += len(groupValue)
+			nextI := i + len(groupValue)
+			fmt.Printf("groupIndex=%v groupValue=%v ch=%v nextI=%v lenT=%v\n", groupIndex, groupValue, ch.String(), nextI, len(text))
+			if string(text[i:nextI]) == groupValue {
+				i = nextI
 				continue
 			}
 			res.Matched = false
