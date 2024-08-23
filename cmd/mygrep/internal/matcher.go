@@ -82,7 +82,7 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 			continue
 		}
 
-		// handle char class escape
+		// handle char class escape / backreference
 		if c == '\\' && nc != '\\' {
 			if bytes.ContainsAny([]byte{nc}, Digits) {
 				chs = append(chs, &Ch{
@@ -197,6 +197,7 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 		i++
 
 	}
+
 	return chs
 
 }
@@ -365,7 +366,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 					for _, endPosAlter := range ma.EndPosList {
 						nextI := i + endPosAlter
 						// each matched alter value can be capture group
-						m.CaptureGroups[ch.GroupIndex] = string(text[i : i+nextI])
+						m.CaptureGroups[ch.GroupIndex] = string(text[i:nextI])
 						//fmt.Printf("matched alterValue len=%v nextI=%v\n", len(alterValue), nextI)
 						if mr := m.MatchHere(text[nextI:], Chs[pi+1:]); mr.Matched {
 							// store all possible matched endPos

@@ -27,7 +27,10 @@ func TestMatcher(t *testing.T) {
 		//{[]byte("this starts and ends with this"), `^(\w+) starts and ends with \1$`, true},
 		// //alternation with wildcard
 		//{[]byte("bugs here"), `(b..s|c..e) here`, true},
-		{[]byte("bugs here and bugs there"), `(b..s|c..e) here and \1 there`, true},
+		//{[]byte("bugs here and bugs there"), `(b..s|c..e) here and \1 there`, true},
+		//{[]byte("3 red squares and 3 red circles"), `(\d+) (\w+) squares and \1 \2 circles`, true},
+		//{[]byte("3 red squares and 4 red circles"), `(\d+) (\w+) squares and \1 \2 circles`, false},
+		{[]byte("cat and fish, cat with fish"), `(c.t|d.g) and (f..h|b..d), \1 with \2`, true},
 	}
 
 	for _, tt := range matchLineTests {
