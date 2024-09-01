@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
 type MatchedResult struct {
@@ -19,6 +18,8 @@ type Matcher struct {
 
 	// CaptureGroups storing capturing groups matched value and will be used by backReferences
 	CaptureGroups []string
+
+	CaptureGroupCount int
 }
 
 func NewMatcher() *Matcher {
@@ -30,183 +31,6 @@ func (m *Matcher) String() string {
 		str += fmt.Sprintf("%v", ch.String())
 	}
 	return str
-
-}
-
-// ScanPattern scans the reg pattern string and convert it to a slice of Ch
-func (m *Matcher) scanRawPattern(pattern string) []*Ch {
-
-	chs := make([]*Ch, 0)
-
-	var (
-		i          = 0
-		groupIndex = 0
-	)
-
-	// detect start of string line anchor
-	if strings.HasPrefix(pattern, "^") {
-		chs = append(chs, &Ch{
-			CharType: CharStartAnchor,
-			Value:    "",
-		})
-		i++
-	}
-
-	for i < len(pattern) {
-		var (
-			c  = pattern[i]
-			nc byte
-		)
-		if i+1 < len(pattern) {
-			nc = pattern[i+1]
-		}
-
-		// handle end of string line anchor
-		if c == '$' && i == len(pattern)-1 {
-			chs = append(chs, &Ch{
-				CharType: CharEndAnchor,
-				Value:    "",
-			})
-			break
-		}
-
-		// handle quantifier one or more
-		if c == '+' {
-			poppedChs, lastElement := popCh(chs)
-			chs = append(poppedChs, &Ch{
-				CharType:         CharQuantifierOneOrMore,
-				Value:            "",
-				PrecedingElement: lastElement,
-			})
-			i++
-			continue
-		}
-
-		// handle char class escape / backreference
-		if c == '\\' && nc != '\\' {
-			if bytes.ContainsAny([]byte{nc}, Digits) {
-				chs = append(chs, &Ch{
-					CharType: CharBackReference,
-					Value:    fmt.Sprintf("%c", nc),
-				})
-			} else {
-				chs = append(chs, &Ch{
-					CharType: CharClassEscape,
-					Value:    fmt.Sprintf("%c%c", c, nc),
-				})
-			}
-
-			i += 2
-			continue
-		}
-
-		// handle quantifier zero or one
-		if nc == '?' {
-			chs = append(chs, &Ch{
-				CharType: CharQuantifierZeroOrOne,
-				Value:    string(c),
-			})
-			i += 2
-			continue
-		}
-		// handle wildcard
-		if c == '.' {
-			chs = append(chs, &Ch{
-				CharType: CharWildcard,
-				Value:    "",
-			})
-			i++
-			continue
-		}
-
-		// try to found
-		// - alternation
-		// - capture group
-		if c == '(' {
-			endPos := strings.Index(pattern[i:], ")")
-			if endPos != -1 {
-
-				// each matched alter value can be capture group
-				groupIndex = groupIndex + 1
-				// (a|b|c|d)
-				alterStrList := strings.Split(pattern[i+1:i+endPos], "|")
-				// found alternation
-
-				if len(alterStrList) > 1 {
-					ch := &Ch{
-						CharType:    CharAlternation,
-						Value:       "",
-						AlterValues: make([][]*Ch, 0),
-						GroupIndex:  groupIndex,
-					}
-					for _, alterStr := range alterStrList {
-						ch.AlterValues = append(ch.AlterValues, m.scanRawPattern(alterStr))
-					}
-
-					chs = append(chs, ch)
-
-				} else {
-					// found single capture groups
-					// 1. append to pattern
-
-					chs = append(chs, &Ch{
-						CharType:      CharCaptureGroup,
-						Value:         pattern[i+1 : i+endPos],
-						AlterValues:   nil,
-						GroupElements: m.scanRawPattern(pattern[i+1 : i+endPos]),
-						GroupIndex:    groupIndex,
-					})
-				}
-
-				// 2. store in CaptureGroups field for backreference
-				m.CaptureGroups = append(m.CaptureGroups, "")
-				//captureGroups = append(captureGroups, pattern[i+1:i+endPos])
-				i = i + endPos + 1
-
-				continue
-
-			}
-
-		}
-
-		// handle char positive/negative group
-		if c == '[' {
-			endPos := strings.Index(pattern[i:], "]")
-			// found group
-			if endPos != -1 {
-				charGroup := pattern[i+1 : i+endPos]
-				charType := CharPositiveGroup
-				if charGroup[0] == '^' {
-					charType = CharNegativeGroup
-					charGroup = charGroup[1:]
-				}
-				chs = append(chs, &Ch{
-					CharType: charType,
-					Value:    charGroup,
-				})
-				//advanced
-				i = i + endPos + 1
-				continue
-			}
-		}
-
-		chs = append(chs, &Ch{
-			CharType: CharLiteral,
-			Value:    string(c),
-		})
-		i++
-
-	}
-
-	return chs
-
-}
-
-// ScanPattern scans the reg pattern string and convert it to a slice of Ch
-func (m *Matcher) ScanPattern(pattern string) *Matcher {
-	m.CaptureGroups = make([]string, 1) // 0 index is not used
-	m.Chs = m.scanRawPattern(pattern)
-	return m
 
 }
 
@@ -390,7 +214,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 			// - 1. need to know the all possible matched text endIndex, then we can advance i
 			// - 2. need to know index of current match group, store current matched group value for backreference
 			sr := false
-			fmt.Println("capture group", len(ch.GroupElements))
+			fmt.Printf("capture group groupIndex=%v lenGroupElements=%v\n", ch.GroupIndex, len(ch.GroupElements))
 			if mg := m.MatchHere(text[i:], ch.GroupElements); mg.Matched {
 				for _, mgEnd := range mg.EndPosList {
 					// store matched group value
@@ -415,7 +239,7 @@ func (m *Matcher) MatchHere(text []byte, Chs []*Ch) *MatchedResult {
 			groupIndex, _ := strconv.Atoi(ch.Value)
 			groupValue := m.CaptureGroups[groupIndex]
 			nextI := i + len(groupValue)
-			fmt.Printf("groupIndex=%v groupValue=%v ch=%v nextI=%v lenT=%v\n", groupIndex, groupValue, ch.String(), nextI, len(text))
+			//fmt.Printf("backReferenceValue=%v groupValue=%v i=%v nextI=%v lenT=%v\n", groupIndex, groupValue, i, nextI, len(text))
 			if string(text[i:nextI]) == groupValue {
 				i = nextI
 				continue

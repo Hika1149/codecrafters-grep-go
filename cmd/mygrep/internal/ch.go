@@ -33,7 +33,11 @@ func (ch *Ch) String() string {
 	//}
 
 	var buf strings.Builder
-	buf.WriteString(fmt.Sprintf("charType: %s value: %s\n", ch.CharType, ch.Value))
+	buf.WriteString(fmt.Sprintf("charType: %s value: %s ", ch.CharType, ch.Value))
+	if ch.CharType == CharCaptureGroup {
+		buf.WriteString(fmt.Sprintf("groupIndex: %d ", ch.GroupIndex))
+	}
+	buf.WriteString("\n")
 	if len(ch.AlterValues) > 0 {
 		buf.WriteString(" alterValues:\n")
 		for _, alterValue := range ch.AlterValues {
@@ -45,6 +49,15 @@ func (ch *Ch) String() string {
 			buf.WriteString("]\n")
 		}
 	}
+
+	if len(ch.GroupElements) > 0 {
+		buf.WriteString(" groupElements:\n")
+		for _, groupElement := range ch.GroupElements {
+			buf.WriteString("\t")
+			buf.WriteString(groupElement.String())
+		}
+	}
+
 	return buf.String()
 }
 
