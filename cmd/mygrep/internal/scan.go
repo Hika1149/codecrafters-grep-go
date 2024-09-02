@@ -108,13 +108,16 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 			// ->  [s1,e1],[s2,e2],[sn,en]   s1<s2..<sn, e1>e2>...>en
 			// just find e1, and recursively find e2, e3, en..
 			endPos := -1
+			hasNestedCaptureGroup := false
 			for j := i + 1; j < len(pattern); {
 				if pattern[j] == '(' {
 					nextRight := strings.Index(pattern[j:], ")")
 					j = j + nextRight + 1
+					hasNestedCaptureGroup = true
 					continue
 				} else if pattern[j] == ')' {
 					endPos = j
+					// outer capture group
 					break
 				} else {
 					j++
@@ -124,16 +127,17 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 
 			if endPos != -1 {
 
-				// each matched alter value can be capture group
 				m.CaptureGroupCount = m.CaptureGroupCount + 1
 				groupIndex := m.CaptureGroupCount
-				fmt.Println("captureGroupCount=", m.CaptureGroupCount)
+
 				// (a|b|c|d)
 				// ((c.t|d.g) and (f..h|b..d))
 				alterStrList := strings.Split(pattern[i+1:endPos], "|")
 				// found alternation
-
-				if len(alterStrList) > 1 {
+				// each matched alter value can be capture group
+				// if found nested capture group, can not just split into alternation group
+				// for simple , each alter value don't have nested capture group, ((abc.af)|def) -> (abc|def)
+				if len(alterStrList) > 1 && !hasNestedCaptureGroup {
 					ch := &Ch{
 						CharType:    CharAlternation,
 						Value:       "",
@@ -147,9 +151,6 @@ func (m *Matcher) scanRawPattern(pattern string) []*Ch {
 					chs = append(chs, ch)
 
 				} else {
-					// found single capture groups
-					// 1. append to pattern
-
 					chs = append(chs, &Ch{
 						CharType:      CharCaptureGroup,
 						Value:         pattern[i+1 : endPos],
